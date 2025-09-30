@@ -723,3 +723,77 @@ textarea.input-field {
     background-color: var(--primary-dark);
     transform: translateY(-2px);
 }
+
+/* Personalização da Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--light);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray);
+    border-radius: 4px;
+    transition: var(--transition);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-light);
+}
+
+/* Scrollbar específica para modo escuro */
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--card-bg);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--gray);
+}
+
+/* Scrollbar para a sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: var(--gray-light);
+    border-radius: 3px;
+}
+
+[data-theme="dark"] .sidebar::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+}
+
+/* Scrollbar para o modal */
+.modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: var(--light);
+    border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: var(--gray);
+    border-radius: 4px;
+}
+
+[data-theme="dark"] .modal-content::-webkit-scrollbar-track {
+    background: var(--card-bg);
+}
+
+[data-theme="dark"] .modal-content::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+}
