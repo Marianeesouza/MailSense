@@ -1,6 +1,7 @@
 import json
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.conf import settings
+from django.utils import timezone
 # Importações do App local:
 from .forms import EmailForm
 from .utils import pre_process_text, extract_text_from_file
@@ -28,6 +29,10 @@ O formato JSON obrigatório é:
 def classify_email(request):
     form = EmailForm()
     results = None
+    
+    # Inicializa o histórico na sessão se não existir
+    if 'classification_history' not in request.session:
+        request.session['classification_history'] = []
     
     if request.method == 'POST':
         form = EmailForm(request.POST, request.FILES)
@@ -58,7 +63,6 @@ def classify_email(request):
                         model='gemini-2.5-flash',
                         contents=prompt,
                         config={
-                            # CORREÇÃO: Usa a variável local SYSTEM_INSTRUCTION
                             "system_instruction": SYSTEM_INSTRUCTION, 
                             "response_mime_type": "application/json"
                         }
@@ -66,17 +70,55 @@ def classify_email(request):
                     
                     # 4. Processar a Resposta JSON
                     results = json.loads(response.text.strip())
-                    
-                    # Opcional: Adicionar o conteúdo original e processado aos resultados
+
+                    # Adicionar informações extras aos resultados
                     results['original_email'] = email_content 
-                    results['processed_text'] = processed_content 
+                    results['processed_text'] = processed_content
+                    results['timestamp'] = timezone.now().isoformat()
+                    results['preview'] = email_content[:100] + '...' if len(email_content) > 100 else email_content
+
+                    # Normaliza categoria
+                    categoria_norm = results.get('categoria', '').strip().lower()
+                    is_produtivo = (categoria_norm == 'produtivo')
+                    is_improdutivo = (categoria_norm == 'improdutivo')
+
+                    # Adiciona ao histórico na sessão (mantém apenas os últimos 10)
+                    history = request.session['classification_history']
+                    history.insert(0, {
+                        'categoria': results.get('categoria', 'Desconhecida'),
+                        'preview': results['preview'],
+                        'timestamp': results['timestamp'],
+                        'resposta_sugerida': results.get('resposta_sugerida', ''),
+                        'processed_text': results.get('processed_text', '')
+                    })
+
+                    # Mantém apenas os últimos 10 itens no histórico
+                    if len(history) > 10:
+                        history = history[:10]
+
+                    request.session['classification_history'] = history
+                    request.session.modified = True
                     
                 except Exception as e:
                     # Trata erros de API, autenticação ou parsing de JSON
                     results = {"error": f"Erro na API de IA. Detalhe: {e}"}
-            
+
+            return redirect('classify')
+    
+    # Obtém o histórico da sessão para o template
+    classification_history = request.session.get('classification_history', [])
+    
     context = {
         'form': form,
-        'results': results
+        'results': results,
+        'classification_history': classification_history,
+        'is_produtivo': is_produtivo if results else False,
+        'is_improdutivo': is_improdutivo if results else False,
     }
     return render(request, 'classification_form.html', context)
+
+def clear_history(request):
+    if 'classification_history' in request.session:
+        request.session['classification_history'] = []
+        request.session.modified = True
+    return redirect('classify')

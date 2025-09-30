@@ -4,97 +4,378 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MailSense: Classificador de E-mails com IA</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
-        h1 { color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 20px; }
-        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; color: #555; }
-        textarea, input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        textarea { resize: vertical; min-height: 150px; }
-        button { background-color: #007bff; color: white; padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; margin-top: 20px; transition: background-color 0.3s; }
-        button:hover { background-color: #0056b3; }
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <!-- Sidebar com Histórico -->
+    <div class="sidebar">
+
+        <!-- Botão de Toggle Modo Escuro -->
+        <div class="theme-toggle">
+            <button id="themeToggle" class="theme-btn">
+                <i class="fas fa-moon"></i>
+                <span>Modo Escuro</span>
+            </button>
+        </div>
+
+        <div class="sidebar-header">
+            <h2><i class="fas fa-history"></i> Histórico</h2>
+        </div>
         
-        /* Estilos de Resultados */
-        .results-section { margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc; }
-        .result-box { padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .produtivo { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
-        .improdutivo { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
-        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
-        
-        .result-header { font-size: 1.5em; font-weight: bold; margin-bottom: 10px; }
-        .suggested-response { background-color: #f9f9f9; border-left: 5px solid #007bff; padding: 15px; border-radius: 4px; white-space: pre-wrap; }
-        
-        /* Exibição de Erros do Django Forms */
-        .errorlist { color: #d32f2f; margin: 10px 0; padding-left: 20px; }
-        .processed-debug { font-size: 0.8em; color: #777; margin-top: 15px; padding: 10px; border: 1px dotted #e0e0e0; }
-    </style>
+        <div class="history-list">
+            {% if classification_history %}
+                {% for item in classification_history %}
+                    <div class="history-item {{ item.categoria|lower }}">
+                        <div class="history-category">
+                            {% if item.categoria|lower == 'produtivo' %}
+                                <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                            {% else %}
+                                <i class="fas fa-info-circle" style="color: #dc3545;"></i>
+                            {% endif %}
+                            {{ item.categoria }}
+                        </div>
+                        <div class="history-preview">{{ item.preview }}</div>
+                        <div class="history-time">
+                            <i class="far fa-clock"></i>
+                            {{ item.timestamp|date:"d/m H:i" }}
+                        </div>
+                        <div class="history-actions">
+                            <button class="view-response-btn" 
+                                    onclick="openModal('{{ item.categoria }}', `{{ item.resposta_sugerida }}`, `{{ item.processed_text }}`)">
+                                <i class="fas fa-eye"></i> Ver Detalhes
+                            </button>
+                            {% if item.categoria|lower == 'produtivo' %}
+                                <button class="copy-sidebar-btn" 
+                                        onclick="copySidebarResponse(`{{ item.resposta_sugerida }}`, this)">
+                                    <i class="fas fa-copy"></i> Copiar Resposta
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+                
+                <form method="post" action="{% url 'clear_history' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="clear-history">
+                        <i class="fas fa-trash"></i> Limpar Histórico
+                    </button>
+                </form>
+            {% else %}
+                <div class="empty-history">
+                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 10px; color: #ccc;"></i>
+                    <p>Nenhuma classificação recente</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-content">
+        <div class="container">
+            <div class="header">
+                <h1><i class="fas fa-robot"></i> MailSense</h1>
+                <p>Classifique e-mails como <strong>Produtivos</strong> ou <strong>Improdutivos</strong> com IA e obtenha respostas automáticas sugeridas.</p>
+            </div>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <ul class="errorlist">
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                <div class="form-section">
+                    <div class="form-group">
+                        <label for="{{ form.email_text.id_for_label }}">
+                            <i class="fas fa-envelope-open-text"></i> {{ form.email_text.label }}
+                        </label>
+                        {% if form.email_text.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.email_text.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        {{ form.email_text }}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ form.email_file.id_for_label }}">
+                            <i class="fas fa-paperclip"></i> {{ form.email_file.label }}
+                        </label>
+                        {% if form.email_file.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.email_file.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        <div class="file-input-wrapper">
+                            {{ form.email_file }}
+                            <div class="file-input-button">
+                                <i class="fas fa-cloud-upload-alt"></i> Clique para selecionar um arquivo de e-mail
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn">
+                        <i class="fas fa-brain"></i> Processar E-mail com IA
+                    </button>
+                </div>
+            </form>
+
+            {% if results %}
+                <div class="results-section">
+                    
+                    {% if results.error %}
+                        <div class="result-box error">
+                            <h3 class="result-header"><i class="fas fa-exclamation-triangle"></i> Erro no Processamento</h3>
+                            <p>Ocorreu um erro ao chamar a API: <code>{{ results.error }}</code></p>
+                        </div>
+                    {% else %}
+                        <div class="result-box {% if is_produtivo %}produtivo{% elif is_improdutivo %}improdutivo{% endif %}">
+                            <h3 class="result-header">
+                                {% if is_produtivo %}
+                                    <i class="fas fa-check-circle"></i>
+                                {% elif is_improdutivo %}
+                                    <i class="fas fa-info-circle"></i>
+                                {% endif %}
+                                Classificação: {{ results.categoria|upper }}
+                            </h3>
+                            <p>
+                                <strong>Ação Necessária:</strong>
+                                {% if is_produtivo %}
+                                    Requer atenção e ação específica da equipe.
+                                {% elif is_improdutivo %}
+                                    Não requer ação imediata. Mensagem de cortesia/informativa.
+                                {% endif %}
+                            </p>
+                        </div>
+
+                        {% if is_produtivo %}
+                            <h3><i class="fas fa-reply"></i> Resposta Automática Sugerida</h3>
+                            <div class="suggested-response">
+                                <pre id="suggested-response-text">{{ results.resposta_sugerida }}</pre>
+                                <button onclick="copyResponse()" class="copy-btn">
+                                    <i class="fas fa-copy"></i> Copiar Resposta
+                                </button>
+                                <button class="view-response-btn" 
+                                        onclick="openModal('{{ results.categoria }}', `{{ results.resposta_sugerida }}`, `{{ results.processed_text }}`)">
+                                    <i class="fas fa-expand"></i> Ver Resposta Completa
+                                </button>
+                            </div>
+                        {% else %}
+                            <div class="no-response-message">
+                                <i class="fas fa-ban" style="color: #6c757d; font-size: 2rem; margin-bottom: 15px;"></i>
+                                <h3 style="color: #6c757d; margin-bottom: 10px;">Sem Resposta Sugerida</h3>
+                                <p style="color: #6c757d;">E-mails improdutivos não requerem resposta.</p>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="processed-debug">
+                            <strong><i class="fas fa-code"></i> [Debug NLP] Texto Pré-Processado Enviado à IA:</strong>
+                            <p>{{ results.processed_text }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal para Visualização Completa -->
+    <div id="responseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-envelope-open"></i> Detalhes da Classificação</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <h4><i class="fas fa-tag"></i> Classificação</h4>
+                    <div id="modalCategory" class="result-box"></div>
+                </div>
+                
+                <div id="modalResponseSection" class="modal-section">
+                    <h4><i class="fas fa-reply"></i> Resposta Sugerida Completa</h4>
+                    <div class="modal-response" id="modalFullResponse"></div>
+                    <button onclick="copyModalResponse()" class="copy-btn">
+                        <i class="fas fa-copy"></i> Copiar Resposta
+                    </button>
+                </div>
+                
+                <div class="modal-section">
+                    <h4><i class="fas fa-code"></i> Texto Processado pela IA</h4>
+                    <div class="processed-debug">
+                        <pre id="modalProcessedText"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function copyResponse() {
             const responseText = document.getElementById('suggested-response-text').innerText;
             navigator.clipboard.writeText(responseText).then(() => {
-                alert("Resposta copiada para a área de transferência!");
+                const btn = document.querySelector('.suggested-response .copy-btn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+                btn.style.backgroundColor = '#28a745';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.backgroundColor = '';
+                }, 2000);
             }).catch(err => {
                 console.error('Falha ao copiar:', err);
+                alert("Erro ao copiar o texto. Tente novamente.");
             });
         }
-    </script>
-</head>
-<body>
-    <div class="container">
-        <h1>🤖 MailSense: Classificação Inteligente de E-mails</h1>
-        <p>Utilize esta ferramenta para classificar e-mails como **Produtivos** ou **Improdutivos** e obter uma resposta sugerida.</p>
 
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            
-            {% if form.non_field_errors %}
-                <ul class="errorlist">
-                    {% for error in form.non_field_errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-
-            {{ form.email_text.label_tag }}
-            {% if form.email_text.errors %}<ul class="errorlist">{% for error in form.email_text.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
-            {{ form.email_text }}
-
-            {{ form.email_file.label_tag }}
-            {% if form.email_file.errors %}<ul class="errorlist">{% for error in form.email_file.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
-            {{ form.email_file }}
-
-            <button type="submit">Processar E-mail com IA</button>
-        </form>
-
-        {% if results %}
-            <div class="results-section">
+        function copySidebarResponse(responseText, button) {
+            navigator.clipboard.writeText(responseText).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+                button.style.backgroundColor = '#28a745';
                 
-                {% if results.error %}
-                    <div class="result-box error">
-                        <h3 class="result-header">❌ Erro no Processamento da IA</h3>
-                        <p>Ocorreu um erro ao chamar a API: <code>{{ results.error }}</code></p>
-                    </div>
-                {% else %}
-                    {% with category=results.categoria|lower %}
-                        <div class="result-box {% if 'produtivo' in category %}produtivo{% else %}improdutivo{% endif %}">
-                            <h3 class="result-header">✅ Classificação: {{ results.categoria|upper }}</h3>
-                            <p><strong>Ação Necessária:</strong> {% if 'produtivo' in category %}Requer atenção e ação específica da equipe.{% else %}Não requer ação imediata. Mensagem de cortesia/informativa.{% endif %}</p>
-                        </div>
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.backgroundColor = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('Falha ao copiar:', err);
+                alert("Erro ao copiar o texto. Tente novamente.");
+            });
+        }
 
-                        <h3>💌 Resposta Automática Sugerida (Copie e Envie)</h3>
-                        <div class="suggested-response">
-                            <pre id="suggested-response-text">{{ results.resposta_sugerida }}</pre>
-                            <button onclick="copyResponse()" style="background-color: #28a745; margin-top: 10px;">Copiar Resposta</button>
-                        </div>
-                        
-                        <div class="processed-debug">
-                            <strong>[Debug NLP] Texto Pré-Processado Enviado à IA:</strong>
-                            <p>{{ results.processed_text }}</p>
-                        </div>
-                    {% endwith %}
-                {% endif %}
-            </div>
-        {% endif %}
-    </div>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.querySelector('input[type="file"]');
+            const fileButton = document.querySelector('.file-input-button');
+            
+            if (fileInput && fileButton) {
+                fileInput.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        fileButton.innerHTML = `<i class="fas fa-file"></i> ${this.files[0].name}`;
+                        fileButton.style.borderColor = '#4361ee';
+                        fileButton.style.color = '#4361ee';
+                    } else {
+                        fileButton.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Clique para selecionar um arquivo de e-mail';
+                        fileButton.style.borderColor = '';
+                        fileButton.style.color = '';
+                    }
+                });
+            }
+        });
+
+        const modal = document.getElementById('responseModal');
+        const closeModal = document.querySelector('.close-modal');
+        const modalResponseSection = document.getElementById('modalResponseSection');
+
+        function openModal(category, fullResponse, processedText) {
+            const modalCategory = document.getElementById('modalCategory');
+            const modalFullResponse = document.getElementById('modalFullResponse');
+            const modalProcessedText = document.getElementById('modalProcessedText');
+            
+            // Define a classe baseada na categoria
+            modalCategory.className = 'result-box';
+            const categoryLower = category.toLowerCase().trim();
+            
+            if (categoryLower === 'produtivo') {
+                modalCategory.classList.add('produtivo');
+                modalCategory.innerHTML = `
+                    <h3 class="result-header"><i class="fas fa-check-circle"></i> Classificação: ${category.toUpperCase()}</h3>
+                    <p><strong>Ação Necessária:</strong> Requer atenção e ação específica da equipe.</p>
+                `;
+                // Mostra a seção de resposta
+                modalResponseSection.style.display = 'block';
+                modalFullResponse.textContent = fullResponse;
+            } else if (categoryLower === 'improdutivo') {
+                modalCategory.classList.add('improdutivo');
+                modalCategory.innerHTML = `
+                    <h3 class="result-header"><i class="fas fa-info-circle"></i> Classificação: ${category.toUpperCase()}</h3>
+                    <p><strong>Ação Necessária:</strong> Não requer ação imediata. Mensagem de cortesia/informativa.</p>
+                `;
+                // Esconde a seção de resposta para improdutivo
+                modalResponseSection.style.display = 'none';
+            } else {
+                modalCategory.classList.add('error');
+                modalCategory.innerHTML = `
+                    <h3 class="result-header"><i class="fas fa-question-circle"></i> Classificação: ${category.toUpperCase()}</h3>
+                    <p><strong>Ação Necessária:</strong> Categoria não reconhecida.</p>
+                `;
+                modalResponseSection.style.display = 'block';
+                modalFullResponse.textContent = fullResponse;
+            }
+            
+            modalProcessedText.textContent = processedText;
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModalFunc() {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function copyModalResponse() {
+            const responseText = document.getElementById('modalFullResponse').innerText;
+            navigator.clipboard.writeText(responseText).then(() => {
+                const btn = document.querySelector('.modal-body .copy-btn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+                btn.style.backgroundColor = '#28a745';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.backgroundColor = '';
+                }, 2000);
+            });
+        }
+
+        closeModal.addEventListener('click', closeModalFunc);
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModalFunc();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.style.display === 'block') {
+                closeModalFunc();
+            }
+        });
+
+
+        // Modo Escuro
+        const themeToggle = document.getElementById('themeToggle');
+        const currentTheme = localStorage.getItem('theme') || 'light';
+
+        // Aplicar tema salvo
+        if (currentTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeToggle.innerHTML = '<i class="fas fa-sun"></i><span>Modo Claro</span>';
+        }
+
+        // Toggle do tema
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            
+            if (currentTheme === 'dark') {
+                document.documentElement.removeAttribute('data-theme');
+                themeToggle.innerHTML = '<i class="fas fa-moon"></i><span>Modo Escuro</span>';
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                themeToggle.innerHTML = '<i class="fas fa-sun"></i><span>Modo Claro</span>';
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+    </script>
 </body>
 </html>

@@ -10,9 +10,8 @@ class EmailForm(forms.Form):
     email_text = forms.CharField(
         # Define o campo como uma área de texto grande (Textarea)
         widget=forms.Textarea(attrs={
-            'rows': 10, 
-            'placeholder': 'Cole o conteúdo do e-mail aqui (Assunto + Corpo)...',
-            'class': 'form-control' # Classe para estilização (Bootstrap, etc.)
+            'class': 'input-field',  # ← ESTA É A CLASSE QUE USAMOS NO CSS
+            'placeholder': 'Cole o texto do e-mail aqui...'
         }),
         required=False, # Não é obrigatório se o arquivo for enviado
         label="1. Inserir Conteúdo do E-mail"
@@ -20,6 +19,9 @@ class EmailForm(forms.Form):
     
     # Campo 2: Para upload de arquivo
     email_file = forms.FileField(
+        widget=forms.ClearableFileInput(attrs={
+            'accept': '.txt,.pdf'    # Aceita apenas arquivos .txt e .pdf
+        }),
         required=False, # Não é obrigatório se o texto for colado
         label="2. Ou fazer upload de arquivo (.txt ou .pdf)"
     )
