@@ -10,11 +10,23 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+from dotenv import load_dotenv
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# --- Configuração de Variável de Ambiente ---
+# Carrega as variáveis do arquivo .env
+load_dotenv() 
+
+# Armazena a chave da API em uma variável de configuração
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") 
+# Verificação de segurança
+if not GEMINI_API_KEY:
+    # Se a chave não for encontrada, levanta um erro para evitar falha no runtime
+    raise EnvironmentError("A variável de ambiente GEMINI_API_KEY não está configurada.")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -37,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'classifier'
 ]
 
 MIDDLEWARE = [

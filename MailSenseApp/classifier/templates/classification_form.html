@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MailSense: Classificador de E-mails com IA</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 20px; }
+        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; color: #555; }
+        textarea, input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        textarea { resize: vertical; min-height: 150px; }
+        button { background-color: #007bff; color: white; padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; margin-top: 20px; transition: background-color 0.3s; }
+        button:hover { background-color: #0056b3; }
+        
+        /* Estilos de Resultados */
+        .results-section { margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc; }
+        .result-box { padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .produtivo { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .improdutivo { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        
+        .result-header { font-size: 1.5em; font-weight: bold; margin-bottom: 10px; }
+        .suggested-response { background-color: #f9f9f9; border-left: 5px solid #007bff; padding: 15px; border-radius: 4px; white-space: pre-wrap; }
+        
+        /* Exibição de Erros do Django Forms */
+        .errorlist { color: #d32f2f; margin: 10px 0; padding-left: 20px; }
+        .processed-debug { font-size: 0.8em; color: #777; margin-top: 15px; padding: 10px; border: 1px dotted #e0e0e0; }
+    </style>
+    <script>
+        function copyResponse() {
+            const responseText = document.getElementById('suggested-response-text').innerText;
+            navigator.clipboard.writeText(responseText).then(() => {
+                alert("Resposta copiada para a área de transferência!");
+            }).catch(err => {
+                console.error('Falha ao copiar:', err);
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 MailSense: Classificação Inteligente de E-mails</h1>
+        <p>Utilize esta ferramenta para classificar e-mails como **Produtivos** ou **Improdutivos** e obter uma resposta sugerida.</p>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <ul class="errorlist">
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {{ form.email_text.label_tag }}
+            {% if form.email_text.errors %}<ul class="errorlist">{% for error in form.email_text.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            {{ form.email_text }}
+
+            {{ form.email_file.label_tag }}
+            {% if form.email_file.errors %}<ul class="errorlist">{% for error in form.email_file.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+            {{ form.email_file }}
+
+            <button type="submit">Processar E-mail com IA</button>
+        </form>
+
+        {% if results %}
+            <div class="results-section">
+                
+                {% if results.error %}
+                    <div class="result-box error">
+                        <h3 class="result-header">❌ Erro no Processamento da IA</h3>
+                        <p>Ocorreu um erro ao chamar a API: <code>{{ results.error }}</code></p>
+                    </div>
+                {% else %}
+                    {% with category=results.categoria|lower %}
+                        <div class="result-box {% if 'produtivo' in category %}produtivo{% else %}improdutivo{% endif %}">
+                            <h3 class="result-header">✅ Classificação: {{ results.categoria|upper }}</h3>
+                            <p><strong>Ação Necessária:</strong> {% if 'produtivo' in category %}Requer atenção e ação específica da equipe.{% else %}Não requer ação imediata. Mensagem de cortesia/informativa.{% endif %}</p>
+                        </div>
+
+                        <h3>💌 Resposta Automática Sugerida (Copie e Envie)</h3>
+                        <div class="suggested-response">
+                            <pre id="suggested-response-text">{{ results.resposta_sugerida }}</pre>
+                            <button onclick="copyResponse()" style="background-color: #28a745; margin-top: 10px;">Copiar Resposta</button>
+                        </div>
+                        
+                        <div class="processed-debug">
+                            <strong>[Debug NLP] Texto Pré-Processado Enviado à IA:</strong>
+                            <p>{{ results.processed_text }}</p>
+                        </div>
+                    {% endwith %}
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
