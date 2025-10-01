@@ -141,3 +141,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Configurações para o Render e produção
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'
+
+# --- Configuração Específica para NLTK no Render ---
+# Isso garante que o NLTK procure os dados baixados durante o build
+import nltk
+NLTK_DATA_DIR = '/opt/render/nltk_data'
+
+# Adiciona o diretório ao caminho de busca do NLTK
+# NOTA: O 'os.path' já deve estar importado na parte superior do settings.py
+if not os.path.exists(NLTK_DATA_DIR):
+    os.makedirs(NLTK_DATA_DIR, exist_ok=True)
+nltk.data.path.append(NLTK_DATA_DIR)
+# --- Fim da Configuração NLTK ---
