@@ -8,6 +8,17 @@ from django.core.files.uploadedfile import UploadedFile
 
 # Funções utilitárias para o classificador
 
+nltk_data_dir = os.path.join(os.path.dirname(__file__), "nltk_data")
+if not os.path.exists(nltk_data_dir):
+    os.makedirs(nltk_data_dir)
+
+nltk.data.path.append(nltk_data_dir)
+
+try:
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('stopwords', quiet=True)
+
 # Definindo stopwords com a lib NLTK configurada para PT-BR
 stop_words = list(nltk.corpus.stopwords.words('portuguese'))
 stemmer = RSLPStemmer()
