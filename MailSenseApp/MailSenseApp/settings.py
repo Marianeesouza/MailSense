@@ -132,17 +132,17 @@ USE_TZ = True
 
 from pathlib import Path
 
-# BASE_DIR deve apontar para a pasta que contém manage.py
-BASE_DIR = Path(__file__).resolve().parent.parent.parent  # se settings.py está em MailSenseApp/MailSenseApp
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+# URL para arquivos estáticos
 STATIC_URL = '/static/'
 
-# Pasta onde os arquivos coletados serão armazenados para deploy
+# Pasta onde o collectstatic vai colocar todos os arquivos para deploy
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Onde o Django deve procurar arquivos estáticos durante o desenvolvimento
+# Pastas extras para desenvolvimento (não obrigatório se você seguir a estrutura acima)
 STATICFILES_DIRS = [
-    BASE_DIR / 'MailSenseApp' / 'classifier' / 'static',  # ajustado para a estrutura real
+    # BASE_DIR / 'classifier' / 'static',  # geralmente não precisa se cada app tem sua própria static
 ]
 
 # Default primary key field type
