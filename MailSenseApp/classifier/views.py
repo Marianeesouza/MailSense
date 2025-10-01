@@ -71,10 +71,13 @@ def classify_email(request):
                     # 4. Processar a Resposta JSON
                     results = json.loads(response.text.strip())
 
+                    timestamp_local = timezone.localtime(timezone.now())
+                    timestamp_str = timestamp_local.strftime("%d-%m-%Y %H:%M:%S")
+
                     # Adicionar informações extras aos resultados
                     results['original_email'] = email_content 
                     results['processed_text'] = processed_content
-                    results['timestamp'] = timezone.now().isoformat()
+                    results['timestamp'] = timezone.now()
                     results['preview'] = email_content[:100] + '...' if len(email_content) > 100 else email_content
 
                     # Normaliza categoria
@@ -87,9 +90,10 @@ def classify_email(request):
                     history.insert(0, {
                         'categoria': results.get('categoria', 'Desconhecida'),
                         'preview': results['preview'],
-                        'timestamp': results['timestamp'],
+                        'timestamp': timestamp_str,
                         'resposta_sugerida': results.get('resposta_sugerida', ''),
-                        'processed_text': results.get('processed_text', '')
+                        'processed_text': results.get('processed_text', ''),
+                        'original_email': results.get('original_email', ''),
                     })
 
                     # Mantém apenas os últimos 10 itens no histórico
@@ -114,6 +118,7 @@ def classify_email(request):
         'classification_history': classification_history,
         'is_produtivo': is_produtivo if results else False,
         'is_improdutivo': is_improdutivo if results else False,
+        'error': results.get('error') if results and 'error' in results else None,
     }
     return render(request, 'classification_form.html', context)
 

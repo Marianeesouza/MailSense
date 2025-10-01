@@ -117,7 +117,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Fuso horário
+TIME_ZONE = 'America/Sao_Paulo'  # ou seu fuso horário local
 
 USE_I18N = True
 

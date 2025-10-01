@@ -609,6 +609,7 @@ textarea.input-field {
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(5px);
+    overflow-x: hidden;
 }
 
 .modal-content {
@@ -620,9 +621,11 @@ textarea.input-field {
     max-width: 750px;
     max-height: 85vh;
     overflow-y: auto;
+    overflow-x: hidden;
     box-shadow: 0 20px 60px var(--shadow-color);
     animation: modalSlideIn 0.3s ease;
     border: 1px solid var(--border-color);
+    box-sizing: border-box;
 }
 
 @keyframes modalSlideIn {
@@ -670,6 +673,7 @@ textarea.input-field {
 
 .modal-body {
     padding: 25px;
+    overflow-x: hidden;
 }
 
 .modal-section {

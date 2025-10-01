@@ -38,15 +38,15 @@ class EmailForm(forms.Form):
         email_text = cleaned_data.get('email_text')
         email_file = cleaned_data.get('email_file')
 
-        # Verifica se ambos os campos estão vazios
-        if not email_text and not email_file:
+        # Verifica se ambos os campos estão vazios ou ambos preenchidos
+        if (not email_text and not email_file) or (email_text and email_file):
             # Se nenhum dado foi fornecido, levanta um erro de validação
             raise forms.ValidationError(
-                "Por favor, cole o texto do e-mail *ou* faça o upload de um arquivo.",
+                "Por favor, cole o texto do e-mail <strong>ou</strong> faça o upload de um arquivo.",
                 code='no_input_provided'
             )
         
-        # Opcional: Validação de tipo de arquivo
+        # Validação de tipo de arquivo
         if email_file:
             filename = email_file.name.lower()
             if not filename.endswith(('.txt', '.pdf')):
