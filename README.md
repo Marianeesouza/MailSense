@@ -34,13 +34,18 @@ O MailSense é uma solução inteligente para triagem automatizada de e-mails em
 ## ⚙️ Arquitetura e Fluxo de Funcionamento
 
 ```mermaid
-graph TD
-A["Input do Usuário (.txt/.pdf)"] --> B["Leitura e Extração (pypdf)"]
-B --> C["Pré-processamento NLP (NLTK)"]
-C --> D["Envio para Gemini AI"]
-D --> E["Classificação + Resposta JSON"]
-E --> F["Persistência via Sessão Django"]
-F --> G["Renderização no Template"]
+graph LR
+    A[Frontend Browser] -->|POST Request| B(Backend Django View)
+    B -->|GET txt/pdf ou Texto| C(NLP Classico)
+    C -->|Output: Texto Processado| D(Gemini AI LLM)
+    D -->|Retorna JSON Classificacao + Resposta| B
+    B -->|Salva na Sessao e Renderiza| A
+
+    subgraph Componentes Chave
+        C_NLP[NLTK + utils.py]
+        D_AI[Gemini 2.5 Flash]
+        B_Django[Django / Gunicorn / Render]
+    end
 ```
 
 ---
