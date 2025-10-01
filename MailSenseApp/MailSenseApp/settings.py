@@ -37,8 +37,11 @@ SECRET_KEY = 'django-insecure-t(u033r6xd3l6pz2m%%4jc_8q&43x(=8i#2@^(#ye6*+qg(#i*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "mailsense-w68l.onrender.com",
+]
 
 # Application definition
 
