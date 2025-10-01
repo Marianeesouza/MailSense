@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'MailSenseApp.urls'
@@ -132,18 +133,19 @@ USE_TZ = True
 
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-# URL para arquivos estáticos
 STATIC_URL = '/static/'
 
-# Pasta onde o collectstatic vai colocar todos os arquivos para deploy
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Onde os arquivos vão ser coletados
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Pastas extras para desenvolvimento (não obrigatório se você seguir a estrutura acima)
+# Onde procurar além dos apps
 STATICFILES_DIRS = [
-    # BASE_DIR / 'classifier' / 'static',  # geralmente não precisa se cada app tem sua própria static
+    os.path.join(BASE_DIR, 'classifier', 'static'),
 ]
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
