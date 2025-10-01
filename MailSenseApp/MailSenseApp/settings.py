@@ -127,23 +127,28 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
+from pathlib import Path
+
+# BASE_DIR deve apontar para a pasta que contém manage.py
+BASE_DIR = Path(__file__).resolve().parent.parent.parent  # se settings.py está em MailSenseApp/MailSenseApp
+
 STATIC_URL = '/static/'
+
+# Pasta onde os arquivos coletados serão armazenados para deploy
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Onde o Django deve procurar arquivos estáticos durante o desenvolvimento
 STATICFILES_DIRS = [
-    BASE_DIR / "classifier" / "static",
+    BASE_DIR / 'MailSenseApp' / 'classifier' / 'static',  # ajustado para a estrutura real
 ]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# Configurações para o Render e produção
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATIC_URL = '/static/'
 
 # --- Configuração Específica para NLTK no Render ---
 # Isso garante que o NLTK procure os dados baixados durante o build
