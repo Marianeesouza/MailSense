@@ -1,27 +1,28 @@
 import nltk
 import string
 from nltk.tokenize import RegexpTokenizer
-from nltk.stem import RSLPStemmer
 import os
 from pypdf import PdfReader
 from django.core.files.uploadedfile import UploadedFile
 
 # Funções utilitárias para o classificador
 
+# pasta local dentro do projeto para armazenar dados do NLTK
 nltk_data_dir = os.path.join(os.path.dirname(__file__), "nltk_data")
-if not os.path.exists(nltk_data_dir):
-    os.makedirs(nltk_data_dir)
-
+os.makedirs(nltk_data_dir, exist_ok=True)
 nltk.data.path.append(nltk_data_dir)
 
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords', quiet=True)
+# garante que os recursos necessários existam
+for resource in ['stopwords', 'rslp']:
+    try:
+        nltk.data.find(f"{resource}")
+    except LookupError:
+        nltk.download(resource, download_dir=nltk_data_dir, quiet=True)
 
-# Definindo stopwords com a lib NLTK configurada para PT-BR
-stop_words = list(nltk.corpus.stopwords.words('portuguese'))
+# agora você pode criar o stemmer
+from nltk.stem import RSLPStemmer
 stemmer = RSLPStemmer()
+stop_words = list(nltk.corpus.stopwords.words('portuguese'))
 
 def pre_process_text(text: str) -> str:
     """
