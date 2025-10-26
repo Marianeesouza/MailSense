@@ -19,7 +19,6 @@ for resource in ['stopwords', 'rslp']:
     except LookupError:
         nltk.download(resource, download_dir=nltk_data_dir, quiet=True)
 
-# agora você pode criar o stemmer
 from nltk.stem import RSLPStemmer
 stemmer = RSLPStemmer()
 stop_words = list(nltk.corpus.stopwords.words('portuguese'))
